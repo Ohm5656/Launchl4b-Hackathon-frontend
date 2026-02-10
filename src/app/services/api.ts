@@ -1,6 +1,28 @@
-// API Service for connecting to Go backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+// API Service for connecting to backend (FastAPI bridge for now)
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
+/* =======================
+   Types (ตรงกับ JSON จาก AI)
+======================= */
+export interface Subscription {
+  service_name: string;
+  category?: string;
+  subscribed_date?: string;
+  next_billing_date?: string;
+  billing_cycle?: string;
+  amount?: number;
+  currency?: string;
+  status?: string;
+  source?: {
+    email_id?: string;
+    from?: string;
+  };
+}
+
+/* =======================
+   Existing types (เก็บไว้ ไม่ต้องลบ)
+======================= */
 export interface GmailConnectRequest {
   email: string;
   redirectUri: string;
@@ -36,6 +58,9 @@ export interface GoogleAuthResponse {
   };
 }
 
+/* =======================
+   API Service
+======================= */
 class ApiService {
   private baseUrl: string;
 
@@ -43,13 +68,34 @@ class ApiService {
     this.baseUrl = API_BASE_URL;
   }
 
-  // Google Sign-In (for Login page)
+  /* =======================
+     🔴 ใช้จริงตอนนี้
+  ======================= */
+  async getSubscriptions(): Promise<Subscription[]> {
+    const response = await fetch(`${this.baseUrl}/subscriptions`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // ❌ เอา Authorization ออกก่อน
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch subscriptions');
+    }
+
+    return response.json();
+  }
+
+  /* =======================
+     🟡 ฟังก์ชันด้านล่าง "ยังไม่ใช้"
+     (เก็บไว้สำหรับ backend Go ในอนาคต)
+  ======================= */
+
   async googleSignIn(credential: string): Promise<GoogleAuthResponse> {
     const response = await fetch(`${this.baseUrl}/auth/google`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ credential }),
     });
 
@@ -60,20 +106,16 @@ class ApiService {
     return response.json();
   }
 
-  // Gmail OAuth - Step 1: Get authorization URL
   async initiateGmailConnection(email: string): Promise<GmailConnectResponse> {
     const redirectUri = `${window.location.origin}/gmail-callback`;
-    
+
     const response = await fetch(`${this.baseUrl}/gmail/connect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.getAuthToken()}`,
       },
-      body: JSON.stringify({ 
-        email,
-        redirectUri 
-      }),
+      body: JSON.stringify({ email, redirectUri }),
     });
 
     if (!response.ok) {
@@ -83,8 +125,10 @@ class ApiService {
     return response.json();
   }
 
-  // Gmail OAuth - Step 2: Exchange code for token
-  async completeGmailConnection(code: string, state: string): Promise<GmailCallbackResponse> {
+  async completeGmailConnection(
+    code: string,
+    state: string
+  ): Promise<GmailCallbackResponse> {
     const response = await fetch(`${this.baseUrl}/gmail/callback`, {
       method: 'POST',
       headers: {
@@ -101,23 +145,6 @@ class ApiService {
     return response.json();
   }
 
-  // Get subscriptions from backend
-  async getSubscriptions() {
-    const response = await fetch(`${this.baseUrl}/subscriptions`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch subscriptions');
-    }
-
-    return response.json();
-  }
-
-  // Trigger Gmail scan
   async scanGmail() {
     const response = await fetch(`${this.baseUrl}/gmail/scan`, {
       method: 'POST',
@@ -133,17 +160,17 @@ class ApiService {
     return response.json();
   }
 
-  // Helper to get auth token from localStorage
+  /* =======================
+     Helpers
+  ======================= */
   private getAuthToken(): string {
     return localStorage.getItem('authToken') || '';
   }
 
-  // Helper to set auth token
   setAuthToken(token: string): void {
     localStorage.setItem('authToken', token);
   }
 
-  // Helper to clear auth token
   clearAuthToken(): void {
     localStorage.removeItem('authToken');
   }
