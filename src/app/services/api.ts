@@ -1,6 +1,6 @@
 // API Service for connecting to backend (FastAPI bridge for now)
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+  import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 /* =======================
    Types (ตรงกับ JSON จาก AI)
