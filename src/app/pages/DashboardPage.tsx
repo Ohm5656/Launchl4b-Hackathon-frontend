@@ -4,6 +4,7 @@ import { Dashboard, Subscription } from '../components/Dashboard';
 import { toast } from 'sonner';
 import { apiService } from '../services/api';
 
+// ===== Mock (fallback) =====
 const INITIAL_SUBSCRIPTIONS: Subscription[] = [
   {
     id: '1',
@@ -24,36 +25,6 @@ const INITIAL_SUBSCRIPTIONS: Subscription[] = [
     category: 'streaming',
     color: '#1DB954',
     isAutoDetected: true
-  },
-  {
-    id: '3',
-    name: 'Adobe Creative Cloud',
-    price: 54.99,
-    billingCycle: 'monthly',
-    nextBillingDate: '2026-02-28',
-    category: 'productivity',
-    color: '#FF0000',
-    isAutoDetected: true
-  },
-  {
-    id: '4',
-    name: 'iCloud+',
-    price: 0.99,
-    billingCycle: 'monthly',
-    nextBillingDate: '2026-02-20',
-    category: 'cloud',
-    color: '#007AFF',
-    isAutoDetected: true
-  },
-  {
-    id: '5',
-    name: 'ChatGPT Plus',
-    price: 20.00,
-    billingCycle: 'monthly',
-    nextBillingDate: '2026-03-05',
-    category: 'AI Tools',
-    color: '#10A37F',
-    isAutoDetected: true
   }
 ];
 
@@ -62,25 +33,54 @@ interface OutletContext {
   setActiveTab: (tab: string) => void;
 }
 
+// ===== util: map service → color (เพิ่มทีหลังได้) =====
+const SERVICE_COLOR_MAP: Record<string, string> = {
+  netflix: '#E50914',
+  spotify: '#1DB954',
+  adobe: '#FF0000',
+  'adobe creative cloud': '#FF0000',
+  icloud: '#007AFF',
+  chatgpt: '#10A37F'
+};
+
+function getColor(serviceName: string) {
+  const key = serviceName.toLowerCase();
+  return SERVICE_COLOR_MAP[key] || '#6366F1'; // default indigo
+}
+
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { setActiveTab } = useOutletContext<OutletContext>();
+
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(INITIAL_SUBSCRIPTIONS);
   const [lastSync, setLastSync] = useState('Never');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch subscriptions from backend
+  // ===== Fetch from backend =====
   const fetchSubscriptions = async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.getSubscriptions();
-      
-      if (response.subscriptions && response.subscriptions.length > 0) {
-        setSubscriptions(response.subscriptions);
+
+      // 👈 response เป็น array ตรง ๆ
+      const data = await apiService.getSubscriptions();
+
+      if (Array.isArray(data) && data.length > 0) {
+        // 🔁 Map จาก AI JSON → UI Subscription
+        const mapped: Subscription[] = data.map((item: any, index: number) => ({
+          id: `${index}-${item.service_name}`,
+          name: item.service_name,
+          price: item.amount ?? 0,
+          billingCycle: item.billing_cycle ?? 'monthly',
+          nextBillingDate: item.next_billing_date ?? '-',
+          category: item.category ?? 'other',
+          color: getColor(item.service_name),
+          isAutoDetected: true
+        }));
+
+        setSubscriptions(mapped);
         setLastSync('Just now');
       } else {
-        // Use mock data if no subscriptions found
         setSubscriptions(INITIAL_SUBSCRIPTIONS);
       }
     } catch (error) {
@@ -94,7 +94,6 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     setActiveTab('dashboard');
 
-    // Check for Gmail connection success
     const gmailConnected = searchParams.get('gmail_connected');
     const email = searchParams.get('email');
     const error = searchParams.get('error');
@@ -102,39 +101,28 @@ export const DashboardPage: React.FC = () => {
     if (gmailConnected === 'true' && email) {
       toast.success(`Gmail connected successfully!`);
       toast.info(`Scanning ${email} for subscriptions...`);
-      
-      // Clear query params
+
       setSearchParams({});
-      
-      // Fetch subscriptions after a short delay to allow backend to scan
+
       setTimeout(() => {
         fetchSubscriptions();
       }, 3000);
     } else if (error) {
-      const errorMessages: Record<string, string> = {
-        'invalid_callback': 'Invalid callback from Google',
-        'invalid_state': 'Security check failed. Please try again.',
-        'token_exchange_failed': 'Failed to exchange authorization code',
-        'gmail_service_failed': 'Failed to connect to Gmail service',
-        'profile_failed': 'Failed to get Gmail profile',
-      };
-      toast.error(errorMessages[error] || `Error: ${error}`);
-      // Clear query params
+      toast.error(`Error: ${error}`);
       setSearchParams({});
     } else {
-      // Try to fetch subscriptions on initial load
       fetchSubscriptions();
     }
-  }, [setActiveTab, searchParams, setSearchParams]);
+  }, [setActiveTab]);
 
   const handleAddGmail = () => {
     navigate('/add-gmail');
   };
 
   return (
-    <Dashboard 
-      subscriptions={subscriptions} 
-      isSyncing={isLoading} 
+    <Dashboard
+      subscriptions={subscriptions}
+      isSyncing={isLoading}
       onSync={handleAddGmail}
       lastSync={lastSync}
     />
