@@ -1,3 +1,8 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router';
+import { Dashboard, Subscription } from '../components/Dashboard';
+import { toast } from 'sonner';
+import { apiService } from '../services/api';
 
 // ===== Mock (fallback) =====
 const INITIAL_SUBSCRIPTIONS: Subscription[] = [
