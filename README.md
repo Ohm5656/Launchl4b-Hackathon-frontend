@@ -16,22 +16,22 @@
 
 ---
 
-## 🎯 Overview
+##  Overview
 
 SubTrack automatically tracks all your subscriptions by scanning Gmail for receipts and invoices. Built with a beautiful, modern fintech design using soft indigo/blue color palette.
 
-### ✨ Key Features
+###  Key Features
 
-- 🔐 **Google OAuth Integration** - Secure sign-in with Google
-- 📧 **Gmail Auto-Scan** - AI detects subscription receipts automatically
-- 📊 **Dashboard** - Beautiful overview of monthly spending
-- 📅 **Calendar View** - Visualize payment dates
-- 💡 **Insights** - AI-powered spending analysis
-- 🎨 **Modern Design** - Fintech-inspired UI with smooth animations
+-  **Google OAuth Integration** - Secure sign-in with Google
+-  **Gmail Auto-Scan** - AI detects subscription receipts automatically
+-  **Dashboard** - Beautiful overview of monthly spending
+-  **Calendar View** - Visualize payment dates
+-  **Insights** - AI-powered spending analysis
+-  **Modern Design** - Fintech-inspired UI with smooth animations
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Option 1: Demo Mode (No Setup Required)
 
@@ -68,7 +68,7 @@ See [QUICK_START.md](./QUICK_START.md) for complete setup with Go backend.
 
 ---
 
-## 📸 Screenshots
+##  Screenshots
 
 ### Login Page
 - Blurred dashboard background
@@ -96,7 +96,7 @@ See [QUICK_START.md](./QUICK_START.md) for complete setup with Go backend.
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - **React 18** with TypeScript
@@ -114,7 +114,7 @@ See [QUICK_START.md](./QUICK_START.md) for complete setup with Go backend.
 
 ---
 
-## 📚 Documentation
+##  Documentation
 
 - **[QUICK_START.md](./QUICK_START.md)** - Get started in 3 ways
 - **[GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)** - Detailed OAuth setup guide
@@ -123,7 +123,7 @@ See [QUICK_START.md](./QUICK_START.md) for complete setup with Go backend.
 
 ---
 
-## 🎨 Features in Detail
+##  Features in Detail
 
 ### 1. Google Sign-In
 - OAuth 2.0 authentication
@@ -157,19 +157,19 @@ See [QUICK_START.md](./QUICK_START.md) for complete setup with Go backend.
 
 ---
 
-## 🔐 Security & Privacy
+##  Security & Privacy
 
-- ✅ **Read-only** Gmail access
-- ✅ **No email modification** - we only read
-- ✅ **Encrypted** data storage
-- ✅ **OAuth 2.0** authentication
-- ✅ **Disconnect anytime** from settings
+-  **Read-only** Gmail access
+-  **No email modification** - we only read
+-  **Encrypted** data storage
+-  **OAuth 2.0** authentication
+-  **Disconnect anytime** from settings
 
 > **Note:** SubTrack is designed for personal use and demos. Not intended for collecting PII or securing highly sensitive data.
 
 ---
 
-## 🌐 Environment Variables
+## Environment Variables
 
 ### Frontend (`.env`)
 ```env
@@ -195,7 +195,7 @@ JWT_SECRET=your-random-secret-key
 
 ---
 
-## 📦 Project Structure
+##  Project Structure
 
 ```
 subtrack/
@@ -222,7 +222,7 @@ subtrack/
 
 ---
 
-## 🚧 Roadmap
+##  Roadmap
 
 - [x] Google OAuth integration
 - [x] Gmail connection flow
@@ -238,7 +238,7 @@ subtrack/
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 This is a demo project for showcasing modern web development practices. Feel free to fork and customize for your needs!
 
@@ -250,7 +250,7 @@ MIT License - feel free to use this project for learning and development.
 
 ---
 
-## 🙋‍♂️ FAQ
+##  FAQ
 
 ### Q: Do I need a backend to use this?
 **A:** No! The app works in demo mode without a backend. You need backend only for actual Gmail scanning.
@@ -272,7 +272,7 @@ MIT License - feel free to use this project for learning and development.
 
 ---
 
-## 🎉 Demo
+##  Demo
 
 Try the demo: `npm run dev` and visit `http://localhost:3000`
 
@@ -280,13 +280,7 @@ Try the demo: `npm run dev` and visit `http://localhost:3000`
 
 ---
 
-## 💬 Support
 
-- 📖 Check [Documentation](#-documentation)
-- 🐛 Found a bug? Open an issue
-- 💡 Have ideas? Contributions welcome!
-
----
 
 <div align="center">
 
