@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
-import { Navigate, Outlet } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
+import { motion, useReducedMotion } from 'motion/react';
 import { Sidebar } from './Sidebar';
 import {
   WorkspaceProvider,
@@ -28,26 +29,31 @@ class WorkspaceBoundary extends Component<
   }
 }
 function WorkspaceLayout() {
-  const { isDemo, storageError } = useWorkspace();
+  const { storageError } = useWorkspace();
+  const location = useLocation();
+  const reducedMotion = useReducedMotion();
   return (
     <div className="app-shell">
       <Sidebar />
       <main className="app-main">
-        <div className="workspace-topbar">
-          <span>SubTrack</span>
-          <div>
-            {isDemo && <span className="badge demo-badge">Demo workspace</span>}
-          </div>
-        </div>
         {storageError && (
           <p className="storage-warning" role="alert">
             Browser storage is full or unavailable. Changes are only kept in
             this tab; export a backup in Settings.
           </p>
         )}
-        <div className="page-content">
+        <motion.div
+          key={location.pathname}
+          className="page-content"
+          initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: reducedMotion ? 0 : 0.38,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+        >
           <Outlet />
-        </div>
+        </motion.div>
       </main>
     </div>
   );

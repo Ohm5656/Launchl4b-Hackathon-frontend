@@ -1,4 +1,6 @@
-﻿import * as Dialog from '@radix-ui/react-dialog';
+import * as Dialog from '@radix-ui/react-dialog';
+import { useEffect, useState } from 'react';
+import { useReducedMotion } from 'motion/react';
 import { X, Mail } from 'lucide-react';
 import { useWorkspace } from '../services/Workspace';
 import {
@@ -7,6 +9,7 @@ import {
   money,
   type Subscription,
 } from '../services/subscriptions';
+import { ServiceIcon } from './ServiceIcon';
 
 export function SubscriptionDetailModal({
   subscription: s,
@@ -16,21 +19,38 @@ export function SubscriptionDetailModal({
   onClose: () => void;
 }) {
   const { isDemo } = useWorkspace();
+  const [open, setOpen] = useState(true);
+  const [returnFocus] = useState(() =>
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null,
+  );
+  const reducedMotion = useReducedMotion();
+  useEffect(() => {
+    if (open) return;
+    const timer = window.setTimeout(onClose, reducedMotion ? 0 : 180);
+    return () => window.clearTimeout(timer);
+  }, [open, onClose, reducedMotion]);
   return (
     <Dialog.Root
-      open
+      open={open}
       onOpenChange={(open) => {
-        if (!open) onClose();
+        setOpen(open);
       }}
     >
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="dialog-content detail-dialog readonly-detail">
+        <Dialog.Content
+          className="dialog-content detail-dialog readonly-detail"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (returnFocus?.isConnected)
+              returnFocus.focus({ preventScroll: true });
+          }}
+        >
           <div className="dialog-header">
             <div className="detail-title">
-              <span className="service-logo" style={{ background: s.color }}>
-                {s.name.charAt(0)}
-              </span>
+              <ServiceIcon subscription={s} />
               <div>
                 <Dialog.Title>{s.name}</Dialog.Title>
                 <Dialog.Description>

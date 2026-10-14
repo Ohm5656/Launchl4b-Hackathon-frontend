@@ -1,4 +1,4 @@
-﻿import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const key = 'subtrack.demo.v1';
 const saved = (page: Page) =>
@@ -19,7 +19,7 @@ async function nav(page: Page, name: string) {
     .click();
 }
 async function backups(page: Page) {
-  await nav(page, 'Settings');
+  await nav(page, 'Inbox');
   await page.getByText('Saved data and backups', { exact: true }).click();
 }
 const receipt = {
@@ -84,7 +84,7 @@ test('demo is read-only, works offline, and shows only essential information', a
   ).toBeVisible();
   await page.getByRole('button', { name: 'Clear search' }).click();
   await expect(page.locator('.subscription-row')).toHaveCount(7);
-  await nav(page, 'Spending insights');
+  await nav(page, 'Insights');
   await expect(page.locator('.category-total strong')).toHaveText('$125.45');
   expect(backend).toEqual([]);
 });
@@ -95,8 +95,8 @@ test('saved demo details survive reload, navigation and sign-out without reseedi
   await demo(page);
   const original = await saved(page);
   await page.reload();
-  await nav(page, 'Billing calendar');
-  await nav(page, 'Overview');
+  await nav(page, 'Calendar');
+  await nav(page, 'Home');
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await page.getByRole('button', { name: 'Login for demo' }).click();
   expect(await saved(page)).toEqual(original);
@@ -117,7 +117,7 @@ test('future visits keep the original receipts and project renewals without expi
     page.getByRole('dialog').getByText('Mar 16, 2036'),
   ).toBeVisible();
   await page.keyboard.press('Escape');
-  await nav(page, 'Billing calendar');
+  await nav(page, 'Calendar');
   await expect(
     page.getByRole('heading', { name: 'February 2036' }),
   ).toBeVisible();
@@ -130,7 +130,7 @@ test('backup tools are tucked away and preserve valid data without accepting mal
 }) => {
   await demo(page);
   const original = await saved(page);
-  await nav(page, 'Settings');
+  await nav(page, 'Inbox');
   await expect(
     page.getByRole('button', { name: 'Export backup' }),
   ).not.toBeVisible();
@@ -332,12 +332,66 @@ test('Google and Gmail screens preserve the OAuth flow without pretending to con
   ).toBeVisible();
 });
 
+test('animated details dismiss with Escape and return keyboard focus to the selected service', async ({
+  page,
+}) => {
+  await demo(page);
+  const card = page.getByRole('button', { name: 'View Netflix', exact: true });
+  await card.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(card).toBeFocused();
+  await card.press('Enter');
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await nav(page, 'Calendar');
+  const originalMonth = await page.locator('.calendar-header h2').textContent();
+  await page.getByRole('button', { name: 'Next month' }).click();
+  await expect(page.locator('.calendar-header h2')).not.toHaveText(
+    originalMonth!,
+  );
+  await page.getByRole('button', { name: 'Today', exact: true }).click();
+  await expect(page.locator('.calendar-header h2')).toHaveText(originalMonth!);
+});
+
+test('reduced motion keeps navigation and service details usable without decorative movement', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await demo(page);
+  expect(
+    await page
+      .locator('.service-stack')
+      .evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe('none');
+  await page.getByRole('button', { name: 'View Netflix', exact: true }).click();
+  expect(
+    await page
+      .getByRole('dialog')
+      .evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe('none');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await nav(page, 'Insights');
+  await expect(
+    page.getByRole('heading', { name: 'Spending insights' }),
+  ).toBeVisible();
+});
+
 for (const width of [320, 390, 768, 1440]) {
   test(`read-only screens fit a ${width}px viewport`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     await demo(page);
+    if (width <= 760) {
+      const navBounds = await page
+        .getByRole('navigation', { name: 'Main navigation' })
+        .boundingBox();
+      expect(navBounds?.y).toBeGreaterThan(700);
+    }
     for (const route of ['', '/calendar', '/insights', '/settings']) {
       await page.goto('/app' + route);
       await expect(page.locator('.page-header h1')).toBeVisible();
@@ -353,7 +407,7 @@ for (const width of [320, 390, 768, 1440]) {
           fullPage: true,
         });
     }
-    await nav(page, 'Overview');
+    await nav(page, 'Home');
     await page
       .getByRole('button', { name: 'View Netflix', exact: true })
       .click();

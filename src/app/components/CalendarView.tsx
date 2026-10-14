@@ -1,4 +1,5 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import {
   addMonths,
   endOfMonth,
@@ -21,6 +22,12 @@ import { SubscriptionDetailModal } from './SubscriptionDetailModal';
 export function CalendarView() {
   const { anchors } = useWorkspace();
   const [month, setMonth] = useState(startOfMonth(new Date()));
+  const [direction, setDirection] = useState(1);
+  const reducedMotion = useReducedMotion();
+  const changeMonth = (step: number) => {
+    setDirection(step);
+    setMonth((current) => addMonths(current, step));
+  };
   const [selected, setSelected] = useState<Subscription | null>(null);
   const payments = anchors
     .flatMap((s) => {
@@ -53,14 +60,14 @@ export function CalendarView() {
             <button
               className="icon-button"
               aria-label="Previous month"
-              onClick={() => setMonth(addMonths(month, -1))}
+              onClick={() => changeMonth(-1)}
             >
               <ChevronLeft size={18} />
             </button>
             <button
               className="icon-button"
               aria-label="Next month"
-              onClick={() => setMonth(addMonths(month, 1))}
+              onClick={() => changeMonth(1)}
             >
               <ChevronRight size={18} />
             </button>
@@ -71,7 +78,13 @@ export function CalendarView() {
             <span key={d}>{d}</span>
           ))}
         </div>
-        <div className="calendar-grid">
+        <motion.div
+          key={format(month, 'yyyy-MM')}
+          className="calendar-grid"
+          initial={reducedMotion ? false : { opacity: 0, x: direction * 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.25 }}
+        >
           {days.map((day: Date | null, i) => (
             <div className={`calendar-day ${!day ? 'outside' : ''}`} key={i}>
               {day && (
@@ -103,7 +116,7 @@ export function CalendarView() {
               )}
             </div>
           ))}
-        </div>
+        </motion.div>
         <div className="calendar-total">
           <span>Scheduled this month</span>
           <strong>

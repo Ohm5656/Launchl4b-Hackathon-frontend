@@ -1,14 +1,26 @@
-﻿import { useState } from 'react';
-import { Search, ChevronRight, Mail, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Search,
+  ChevronRight,
+  Mail,
+  RefreshCw,
+  CalendarDays,
+  ArrowUpRight,
+  Heart,
+} from 'lucide-react';
 import { Link } from 'react-router';
+import { motion, useReducedMotion } from 'motion/react';
+import { format, parseISO } from 'date-fns';
 import { useWorkspace } from '../services/Workspace';
 import {
   dateLabel,
+  daysUntil,
   money,
   monthlyCost,
   type Subscription,
 } from '../services/subscriptions';
 import { SubscriptionDetailModal } from './SubscriptionDetailModal';
+import { ServiceIcon } from './ServiceIcon';
 export type { Subscription } from '../services/subscriptions';
 
 export function Dashboard() {
@@ -16,6 +28,7 @@ export function Dashboard() {
     useWorkspace();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Subscription | null>(null);
+  const reducedMotion = useReducedMotion();
   const total = subscriptions.reduce((sum, s) => sum + monthlyCost(s), 0);
   const sorted = [...subscriptions].sort((a, b) =>
     a.nextBillingDate.localeCompare(b.nextBillingDate),
@@ -25,15 +38,11 @@ export function Dashboard() {
     s.name.toLowerCase().includes(search.toLowerCase()),
   );
   return (
-    <div className="page-stack simple-overview">
-      <header className="page-header">
+    <div className="page-stack consumer-overview">
+      <header className="page-header consumer-page-header">
         <div>
           <h1>Your subscriptions</h1>
-          <p>
-            {isDemo
-              ? 'A preview with sample email receipts.'
-              : 'Found automatically from your email receipts.'}
-          </p>
+          <p>Keep enjoying. We’ll keep track of the renewals.</p>
         </div>
         {!isDemo &&
           (lastSync ? (
@@ -55,122 +64,162 @@ export function Dashboard() {
             </Link>
           ))}
       </header>
-      <section className="simple-summary" aria-label="Subscription summary">
-        <div className="summary-spend">
-          <span>Monthly total</span>
-          <strong>
-            {money(total)}
-            <small> / month</small>
-          </strong>
-          <p>
-            {subscriptions.length} subscriptions · annual plans averaged monthly
-          </p>
+      <section className="consumer-summary" aria-label="Subscription summary">
+        <div className="spending-card summary-spend">
+          <div className="spending-copy">
+            <span className="spend-label">
+              <Heart size={17} />
+              Your monthly total
+            </span>
+            <strong>
+              {money(total)}
+              <small> / month</small>
+            </strong>
+            <p>
+              {subscriptions.length}{' '}
+              {subscriptions.length === 1 ? 'subscription' : 'subscriptions'},
+              all in one place.
+            </p>
+            <small className="spend-explainer">
+              Annual plans averaged monthly
+            </small>
+          </div>
+          {subscriptions.length > 0 && (
+            <div className="service-stack" aria-hidden="true">
+              {subscriptions.slice(0, 3).map((s, i) => (
+                <div
+                  key={s.id}
+                  className={`stacked-service stacked-service-${i}`}
+                >
+                  <ServiceIcon subscription={s} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="summary-next">
-          <span>Next payment</span>
+        <div className="next-renewal-card">
+          <div className="renewal-card-label">
+            <span>
+              <CalendarDays size={17} />
+              Up next
+            </span>
+            <Link
+              to="/app/calendar"
+              className="icon-button"
+              aria-label="Open billing calendar"
+            >
+              <ArrowUpRight size={18} />
+            </Link>
+          </div>
           {next ? (
             <>
-              <strong>{next.name}</strong>
-              <p>
-                {money(next.price)} on {dateLabel(next.nextBillingDate)}
-              </p>
+              <div className="next-service">
+                <ServiceIcon subscription={next} />
+                <div>
+                  <strong>{next.name}</strong>
+                  <span>
+                    {money(next.price)} on{' '}
+                    {format(parseISO(next.nextBillingDate), 'MMM d')}
+                  </span>
+                </div>
+              </div>
+              <div className="next-renewal-footer">
+                <span className="renewal-timing">
+                  {daysUntil(next.nextBillingDate) === 0
+                    ? 'Renews today'
+                    : `Renews in ${daysUntil(next.nextBillingDate)} days`}
+                </span>
+                <span>
+                  {next.billingCycle === 'monthly'
+                    ? 'Monthly plan'
+                    : 'Annual plan'}
+                </span>
+              </div>
             </>
           ) : (
-            <p>No upcoming payments</p>
+            <p className="no-next-payment">No upcoming payments yet.</p>
           )}
         </div>
       </section>
-      <section className="panel simple-list">
-        <div className="simple-list-header">
+      <section className="consumer-collection">
+        <div className="collection-heading">
           <h2>
-            Subscriptions <span className="count">{subscriptions.length}</span>
+            Your apps <span className="count">{subscriptions.length}</span>
           </h2>
           {subscriptions.length > 0 && (
             <div className="search-field">
-              <Search size={16} />
+              <Search size={17} />
               <input
                 aria-label="Search subscriptions"
-                placeholder="Search"
+                placeholder="Find a subscription"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
           )}
         </div>
-        <div className="subscription-table">
-          <div className="table-labels">
-            <span>Service</span>
-            <span>Next payment</span>
-            <span>Amount</span>
-            <span />
-          </div>
+        <div className="subscription-grid">
           {filtered.map((s) => (
-            <button
-              className="subscription-row"
+            <motion.button
+              className="subscription-row subscription-tile"
               key={s.id}
               aria-label={`View ${s.name}`}
               onClick={() => setSelected(anchors.find((a) => a.id === s.id)!)}
+              whileHover={reducedMotion ? undefined : { y: -5 }}
+              whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
             >
-              <span className="service-cell">
-                <span className="service-logo" style={{ background: s.color }}>
-                  {s.name === 'Adobe Creative Cloud'
-                    ? 'Ad'
-                    : s.name === 'iCloud+'
-                      ? 'iC'
-                      : s.name === 'YouTube Premium'
-                        ? '▶'
-                        : s.name.charAt(0)}
-                </span>
-                <strong>{s.name}</strong>
-              </span>
-              <span
-                className="renewal-cell"
-                title={dateLabel(s.nextBillingDate)}
-              >
-                <strong>
-                  {dateLabel(s.nextBillingDate).replace(/, \d{4}/, '')}
-                </strong>
-              </span>
-              <span className="amount-cell">
+              <div className="tile-top">
+                <ServiceIcon subscription={s} />
+                <ChevronRight size={17} className="tile-chevron" />
+              </div>
+              <h3>{s.name}</h3>
+              <div className="tile-price">
                 <strong>{money(s.price)}</strong>
-                <small>
-                  /{s.billingCycle === 'monthly' ? 'month' : 'year'}
-                </small>
-              </span>
-              <ChevronRight className="simple-row-arrow" size={15} />
-            </button>
+                <span>/{s.billingCycle === 'monthly' ? 'month' : 'year'}</span>
+              </div>
+              <div className="tile-renewal">
+                <CalendarDays size={13} />
+                <span>
+                  Renews {dateLabel(s.nextBillingDate).replace(/, \d{4}/, '')}
+                </span>
+              </div>
+            </motion.button>
           ))}
-          {!filtered.length && (
-            <div className="empty-state">
-              <h3>
-                {subscriptions.length
-                  ? 'No matching subscriptions'
-                  : 'No subscriptions yet'}
-              </h3>
-              <p>
-                {subscriptions.length
-                  ? 'Try a different service name.'
-                  : isDemo
-                    ? 'No sample receipts are saved in this demo.'
-                    : 'Connect Gmail to find your subscriptions automatically.'}
-              </p>
-              {subscriptions.length ? (
-                <button
-                  className="button secondary"
-                  onClick={() => setSearch('')}
-                >
-                  Clear search
-                </button>
-              ) : (
-                !isDemo && (
-                  <Link className="button primary" to="/add-gmail">
-                    Connect Gmail
-                  </Link>
-                )
-              )}
-            </div>
-          )}
         </div>
+        {!filtered.length && (
+          <div className="panel empty-state">
+            <div className="empty-illustration">
+              <Mail size={26} />
+            </div>
+            <h3>
+              {subscriptions.length
+                ? 'No matching subscriptions'
+                : 'No subscriptions yet'}
+            </h3>
+            <p>
+              {subscriptions.length
+                ? 'Try a different service name.'
+                : isDemo
+                  ? 'No sample receipts are saved in this demo.'
+                  : 'Connect Gmail and let your receipts do the work.'}
+            </p>
+            {subscriptions.length ? (
+              <button
+                className="button secondary"
+                onClick={() => setSearch('')}
+              >
+                Clear search
+              </button>
+            ) : (
+              !isDemo && (
+                <Link className="button primary" to="/add-gmail">
+                  Connect Gmail
+                </Link>
+              )
+            )}
+          </div>
+        )}
       </section>
       {selected && (
         <SubscriptionDetailModal

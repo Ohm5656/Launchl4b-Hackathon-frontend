@@ -1,4 +1,4 @@
-﻿import { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Link } from 'react-router';
 import { Download, Mail, RefreshCw } from 'lucide-react';
@@ -61,7 +61,7 @@ export function Settings() {
     <div className="page-stack settings-page">
       <header className="page-header">
         <div>
-          <h1>Settings</h1>
+          <h1>Your inbox</h1>
           <p>Your email connection.</p>
         </div>
       </header>

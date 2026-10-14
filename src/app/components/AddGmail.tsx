@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import { ArrowLeft, Mail, ShieldCheck, ExternalLink } from 'lucide-react';
 import { Brand } from './Brand';
@@ -29,7 +29,7 @@ export function AddGmail() {
         <Brand />
         <Link to="/app/settings" className="connection-back">
           <ArrowLeft size={16} />
-          Back to settings
+          Back to inbox
         </Link>
         <section className="panel connection-panel">
           <div className="source-icon">

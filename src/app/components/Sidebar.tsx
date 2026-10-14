@@ -1,86 +1,84 @@
-﻿import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router';
+import { NavLink, useNavigate, useLocation } from 'react-router';
 import {
   LayoutDashboard,
   CalendarDays,
   ChartNoAxesCombined,
   Mail,
   LogOut,
-  Menu,
-  X,
 } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Brand } from './Brand';
 import { SESSION_KEY, useWorkspace } from '../services/Workspace';
 import { apiService } from '../services/api';
 
 export function Sidebar() {
-  const [open, setOpen] = useState(false);
   const { isDemo } = useWorkspace();
   const navigate = useNavigate();
+  const location = useLocation();
+  const reducedMotion = useReducedMotion();
   const items = [
-    { path: '/app', label: 'Overview', icon: LayoutDashboard },
-    { path: '/app/calendar', label: 'Billing calendar', icon: CalendarDays },
+    { path: '/app', label: 'Home', icon: LayoutDashboard },
+    { path: '/app/calendar', label: 'Calendar', icon: CalendarDays },
     {
       path: '/app/insights',
-      label: 'Spending insights',
+      label: 'Insights',
       icon: ChartNoAxesCombined,
     },
-    { path: '/app/settings', label: 'Settings', icon: Mail },
+    { path: '/app/settings', label: 'Inbox', icon: Mail },
   ];
   return (
-    <>
-      <button
-        className="mobile-menu icon-button"
-        onClick={() => setOpen(!open)}
-        aria-label={open ? 'Close navigation' : 'Open navigation'}
-        aria-expanded={open}
-        aria-controls="workspace-sidebar"
-      >
-        {open ? <X /> : <Menu />}
-      </button>
-      {open && (
-        <button
-          className="sidebar-backdrop"
-          aria-label="Close navigation"
-          onClick={() => setOpen(false)}
-        />
-      )}
-      <aside
-        id="workspace-sidebar"
-        className={`sidebar ${open ? 'is-open' : ''}`}
-      >
-        <Brand />
-        <nav aria-label="Main navigation">
+    <header className="consumer-header">
+      <div className="consumer-header-inner">
+        <NavLink to="/app" aria-label="SubTrack home">
+          <Brand />
+        </NavLink>
+        <nav className="consumer-nav" aria-label="Main navigation">
           {items.map(({ path, label, icon: Icon }) => (
             <NavLink
               key={path}
               to={path}
               end={path === '/app'}
-              onClick={() => setOpen(false)}
               className={({ isActive }) =>
-                `nav-item ${isActive ? 'active' : ''}`
+                `consumer-nav-link ${isActive ? 'active' : ''}`
               }
             >
-              <Icon size={19} />
-              {label}
+              {location.pathname === path && (
+                <motion.span
+                  className="nav-active-pill"
+                  layoutId="active-navigation"
+                  transition={
+                    reducedMotion
+                      ? { duration: 0 }
+                      : { type: 'spring', stiffness: 380, damping: 34 }
+                  }
+                />
+              )}
+              <Icon size={18} />
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-bottom simple-sidebar-bottom">
-          <span>{isDemo ? 'Demo account' : 'My account'}</span>
+        <div className="consumer-account">
+          {isDemo && (
+            <span className="consumer-demo-label">
+              <span />
+              Demo
+            </span>
+          )}
           <button
-            className="button sign-out-button"
+            className="icon-button consumer-signout"
+            aria-label="Sign out"
+            title="Sign out"
             onClick={() => {
               localStorage.removeItem(SESSION_KEY);
               apiService.clearAuthToken();
               navigate('/', { replace: true });
             }}
           >
-            <LogOut size={16} />
-            Sign out
+            <LogOut size={18} />
           </button>
         </div>
-      </aside>
-    </>
+      </div>
+    </header>
   );
 }

@@ -1,6 +1,6 @@
 ﻿# SubTrack
 
-A personal subscription workspace built with React, TypeScript, Vite, and Tailwind. The interface keeps the original indigo/blue palette with a quieter layout, a searchable subscription list, billing calendar, and spending forecasts.
+A personal subscription app built with React, TypeScript, Vite, and Tailwind. The interface brings back the original indigo/blue palette and rounded surfaces with service cards, a billing calendar, and spending insights.
 
 ## Run locally
 
@@ -15,7 +15,9 @@ Open the URL printed by Vite (normally `http://localhost:5173`). Choose **Login 
 
 The demo starts with seven illustrative subscriptions and sample receipt history. It is created once per browser and stays saved after reload or sign-out.
 
-The app follows the email flow: connect Gmail, automatically retrieve subscriptions, then view their prices and billing dates. Subscription data is read-only; there are no manual add, edit, or delete controls. The overview shows a monthly total, the next payment, and one searchable list. Extra receipt details open on demand.
+The app follows the email flow: connect Gmail, automatically retrieve subscriptions, then view their prices and billing dates. Subscription data is read-only; there are no manual add, edit, or delete controls. Home shows a monthly total, the next payment, and searchable service cards. Extra receipt details open on demand.
+
+Navigation lives at the top on desktop and in a bottom tab bar on mobile. Page entrances, the active navigation pill, service selection, calendar month changes, and dialog opening/closing have short animations. The operating system's reduced-motion preference disables decorative movement. Notifications sit above the mobile tab bar so they do not block navigation.
 
 Overview, Calendar, Insights, and Settings share one workspace. Annual plans use their monthly equivalent in spending totals and their full amount in the renewal month's payment forecast.
 
@@ -26,7 +28,7 @@ Overview, Calendar, Insights, and Settings share one workspace. Annual plans use
 - The original billing date remains saved. Upcoming dates are projected from it when the app opens and periodically while it stays open, including month-end and leap-year renewals.
 - Stored demo receipt history keeps its original dates and amounts.
 - Browser storage is specific to the site's origin and browser profile. Clearing site data, private browsing, or changing devices can remove access. This frontend does not promise permanent cloud storage.
-- In **Settings → Saved data and backups**, use **Export backup** to keep a JSON copy. **Restore backup** validates the file and asks before replacing the saved data. These tools are collapsed by default to keep the email connection screen simple.
+- In **Inbox → Saved data and backups**, use **Export backup** to keep a JSON copy. **Restore backup** validates the file and asks before replacing the saved data. These tools are collapsed by default to keep the email connection screen simple.
 - If browser storage is unavailable, an on-screen message explains that changes only remain in the current tab. Unreadable saved data is retained instead of being silently replaced.
 
 Demo prices and receipts are illustrative, not live provider pricing. Demo mode does not fetch data from Gmail or the backend. Forecasts are scheduled estimates, not verified bank transactions.
@@ -57,6 +59,6 @@ npx playwright install chromium
 npm test
 ```
 
-Browser tests cover read-only subscription screens, email-driven updates, demo persistence, sign-out/re-entry, backup restoration, malformed storage, real-account caching, responsive layouts, and future dates. Billing tests cover month-end dates, leap years, and annual cost normalization.
+Browser tests cover read-only subscription screens, email-driven updates, demo persistence, sign-out/re-entry, backup restoration, malformed storage, real-account caching, responsive layouts, future dates, reduced motion, and keyboard focus after closing animated details. Billing tests cover month-end dates, leap years, and annual cost normalization.
 
 When deploying, configure your host to serve `index.html` for app routes such as `/app/calendar` so that direct links and refreshes work.
