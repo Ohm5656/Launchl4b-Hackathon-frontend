@@ -148,24 +148,6 @@ function useWorkspaceState() {
     ...s,
     nextBillingDate: nextBilling(s, today),
   }));
-  const saveSubscription = (sub: Subscription) => {
-    setSaved((prev) => ({
-      ...prev,
-      subscriptions: prev.subscriptions.some((s) => s.id === sub.id)
-        ? prev.subscriptions.map((s) => (s.id === sub.id ? sub : s))
-        : [...prev.subscriptions, sub],
-    }));
-    toast.success('Subscription saved');
-  };
-  const removeSubscription = (id: string) => {
-    setSaved((prev) => ({
-      ...prev,
-      subscriptions: prev.subscriptions.filter((s) => s.id !== id),
-    }));
-    toast.success('Removed from tracking');
-  };
-  const setPreferences = (preferences: Preferences) =>
-    setSaved((prev) => ({ ...prev, preferences }));
   const restoreWorkspace = (backup: SavedWorkspace) => {
     setSaved(backup);
     toast.success('Workspace restored');
@@ -227,23 +209,21 @@ function useWorkspaceState() {
           'Some receipts are missing a valid amount or billing date. Your saved data was kept.',
         );
       setSaved((prev) => {
-        // A new scan may discover services, but must not erase saved notes or local edits.
+        // Email receipts are authoritative; refresh amounts and billing dates too.
         const unique = [
           ...new Map(mapped.map((item) => [item.id, item])).values(),
         ];
-        const discovered = unique.filter(
-          (item) =>
-            !prev.subscriptions.some(
-              (s) => s.name.toLowerCase() === item.name.toLowerCase(),
-            ),
-        );
         return {
           ...prev,
-          subscriptions: [...prev.subscriptions, ...discovered],
+          subscriptions: unique.map((item) => ({
+            ...prev.subscriptions.find(
+              (s) => s.name.toLowerCase() === item.name.toLowerCase(),
+            ),
+            ...item,
+          })),
           lastSync: new Date().toISOString(),
         };
       });
-      toast.success('Receipts refreshed');
     } catch (error) {
       toast.error(
         error instanceof Error && !error.message.includes('fetch')
@@ -261,9 +241,6 @@ function useWorkspaceState() {
     isDemo,
     storageError,
     isSyncing,
-    saveSubscription,
-    removeSubscription,
-    setPreferences,
     restoreWorkspace,
     sync,
   };

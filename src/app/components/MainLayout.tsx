@@ -1,12 +1,11 @@
 import { Component, type ReactNode } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router';
+import { Navigate, Outlet } from 'react-router';
 import { Sidebar } from './Sidebar';
 import {
   WorkspaceProvider,
   SESSION_KEY,
   useWorkspace,
 } from '../services/Workspace';
-import { format } from 'date-fns';
 
 class WorkspaceBoundary extends Component<
   { children: ReactNode },
@@ -30,27 +29,14 @@ class WorkspaceBoundary extends Component<
 }
 function WorkspaceLayout() {
   const { isDemo, storageError } = useWorkspace();
-  const location = useLocation();
-  const title = location.pathname.endsWith('calendar')
-    ? 'Billing calendar'
-    : location.pathname.endsWith('insights')
-      ? 'Spending insights'
-      : location.pathname.endsWith('settings')
-        ? 'Settings'
-        : 'Overview';
   return (
     <div className="app-shell">
       <Sidebar />
       <main className="app-main">
         <div className="workspace-topbar">
-          <span>
-            My workspace <span className="breadcrumb">/</span> {title}
-          </span>
+          <span>SubTrack</span>
           <div>
             {isDemo && <span className="badge demo-badge">Demo workspace</span>}
-            <span className="topbar-date">
-              {format(new Date(), 'EEE, MMM d')}
-            </span>
           </div>
         </div>
         {storageError && (

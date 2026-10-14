@@ -8,13 +8,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { ArrowUpRight, CircleHelp } from 'lucide-react';
-import { Link } from 'react-router';
 import { useWorkspace } from '../services/Workspace';
 import { billingInMonth, money, monthlyCost } from '../services/subscriptions';
 
 export function Insights() {
-  const { subscriptions, anchors, preferences, isDemo } = useWorkspace();
+  const { subscriptions, anchors } = useWorkspace();
   const total = subscriptions.reduce((n, s) => n + monthlyCost(s), 0);
   const categoryData = subscriptions
     .reduce<{ name: string; value: number }[]>((acc, s) => {
@@ -36,39 +34,17 @@ export function Insights() {
       ),
     };
   });
-  const largest = [...subscriptions].sort(
-    (a, b) => monthlyCost(b) - monthlyCost(a),
-  )[0];
   return (
     <div className="page-stack">
       <header className="page-header">
         <div>
           <h1>Spending insights</h1>
-          <p>A closer look at the subscriptions you’ve chosen to keep.</p>
+          <p>Spending by month and category.</p>
         </div>
-        <span className="badge">USD · monthly equivalents</span>
+        <span className="annual-estimate">
+          {money(total * 12)} projected / year
+        </span>
       </header>
-      <div className="insight-stats">
-        <div>
-          <span>Projected annual spend</span>
-          <strong>{money(total * 12)}</strong>
-          <small>At your current subscription rates</small>
-        </div>
-        <div>
-          <span>Average cost per service</span>
-          <strong>
-            {money(subscriptions.length ? total / subscriptions.length : 0)}
-          </strong>
-          <small>Per month, including annual plans</small>
-        </div>
-        <div>
-          <span>Room in your monthly budget</span>
-          <strong className={total > preferences.budget ? 'due-soon' : ''}>
-            {money(preferences.budget - total)}
-          </strong>
-          <small>Budget of {money(preferences.budget)} per month</small>
-        </div>
-      </div>
       <div className="insights-grid">
         <section className="panel forecast-panel">
           <div className="panel-heading">
@@ -76,7 +52,6 @@ export function Insights() {
               <h2>Payment forecast</h2>
               <p>What’s scheduled over the next six months.</p>
             </div>
-            <span className="badge">Projected</span>
           </div>
           <div className="chart-container">
             <ResponsiveContainer width="100%" height="100%">
@@ -121,9 +96,8 @@ export function Insights() {
             </ResponsiveContainer>
           </div>
           <p className="chart-note">
-            <CircleHelp size={14} />
-            Annual plans appear in their renewal month. This is a forecast, not
-            a record of bank charges.
+            Projected from your current plans. Annual payments appear in their
+            renewal month.
           </p>
         </section>
         <section className="panel category-panel">
@@ -162,9 +136,7 @@ export function Insights() {
               </div>
             ))}
             {!categoryData.length && (
-              <p className="aside-description">
-                Add a subscription to see your breakdown.
-              </p>
+              <p className="aside-description">No subscription receipts yet.</p>
             )}
           </div>
           <div className="category-total">
@@ -173,30 +145,6 @@ export function Insights() {
           </div>
         </section>
       </div>
-      {largest && (
-        <section className="review-callout">
-          <div className="review-icon">
-            <ArrowUpRight size={22} />
-          </div>
-          <div>
-            <h3>A good place to start your next review</h3>
-            <p>
-              {largest.name} is your largest recurring expense at{' '}
-              {money(monthlyCost(largest))} per month. Keep a note of how often
-              you use it before its next renewal.
-            </p>
-          </div>
-          <Link className="button secondary" to="/app">
-            Review subscriptions
-          </Link>
-        </section>
-      )}
-      <p className="page-footnote">
-        {isDemo
-          ? 'Demo amounts are illustrative.'
-          : 'Amounts reflect your saved subscriptions.'}{' '}
-        Forecasts assume you keep your current plans and prices.
-      </p>
     </div>
   );
 }

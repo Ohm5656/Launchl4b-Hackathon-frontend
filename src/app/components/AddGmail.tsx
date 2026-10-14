@@ -14,7 +14,7 @@ export function AddGmail() {
     const backend = import.meta.env.VITE_API_URL;
     if (!backend) {
       toast.info(
-        'Gmail connection is not configured yet. You can still add subscriptions manually.',
+        'Gmail connection is not configured yet. Use the demo to explore sample receipts.',
       );
       return;
     }
@@ -55,7 +55,7 @@ export function AddGmail() {
               </h2>
               <p>
                 {isDemo
-                  ? 'Your edits, notes, and preferences stay saved in this browser.'
+                  ? 'Your sample receipts stay saved in this browser.'
                   : 'Google will show the permissions requested before you connect. SubTrack requests read-only access to Gmail to find receipts.'}
               </p>
             </div>

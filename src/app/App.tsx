@@ -15,7 +15,7 @@ export default function App() {
       >
         <RouterProvider router={router} />
       </Suspense>
-      <Toaster position="top-right" closeButton richColors />
+      <Toaster position="bottom-right" closeButton richColors />
     </>
   );
 }

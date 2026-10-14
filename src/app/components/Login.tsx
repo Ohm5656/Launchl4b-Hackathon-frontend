@@ -154,8 +154,8 @@ export function Login() {
           <div className="demo-explanation">
             <strong>No account needed.</strong>
             <p>
-              Explore subscriptions, billing history, and spending insights.
-              Your demo edits stay saved in this browser.
+              Try the email-based subscription tracker with saved sample
+              receipts.
             </p>
           </div>
           <div className="login-trust">
