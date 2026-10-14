@@ -5,8 +5,14 @@ import { GmailCallback } from './components/GmailCallback';
 import { MainLayout } from './components/MainLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { CalendarPage } from './pages/CalendarPage';
-import { InsightsPage } from './pages/InsightsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { lazy } from 'react';
+
+const InsightsPage = lazy(() =>
+  import('./pages/InsightsPage').then((module) => ({
+    default: module.InsightsPage,
+  })),
+);
 
 export const router = createBrowserRouter([
   {

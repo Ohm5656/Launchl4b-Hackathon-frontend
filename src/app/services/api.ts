@@ -73,6 +73,7 @@ class ApiService {
   ======================= */
   async getSubscriptions(): Promise<Subscription[]> {
     const response = await fetch(`${this.baseUrl}/subscriptions`, {
+      signal: AbortSignal.timeout(15000),
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -130,6 +131,7 @@ class ApiService {
     state: string
   ): Promise<GmailCallbackResponse> {
     const response = await fetch(`${this.baseUrl}/gmail/callback`, {
+      signal: AbortSignal.timeout(15000),
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,141 +1,168 @@
-import React, { useState } from 'react';
-import { 
-  format, 
-  startOfMonth, 
-  endOfMonth, 
-  eachDayOfInterval, 
-  isSameMonth, 
-  isSameDay, 
-  addMonths, 
-  subMonths,
-  getDay
+import { useState } from 'react';
+import {
+  addMonths,
+  endOfMonth,
+  eachDayOfInterval,
+  format,
+  getDay,
+  isSameDay,
+  parseISO,
+  startOfMonth,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Info } from 'lucide-react';
-import { clsx } from 'clsx';
-import { Subscription } from './Dashboard';
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { useWorkspace } from '../services/Workspace';
+import {
+  billingInMonth,
+  money,
+  type Subscription,
+} from '../services/subscriptions';
+import { SubscriptionDetailModal } from './SubscriptionDetailModal';
 
-interface CalendarViewProps {
-  subscriptions: Subscription[];
-}
-
-export const CalendarView: React.FC<CalendarViewProps> = ({ subscriptions }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const dateRange = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  
-  const startDay = getDay(monthStart);
-  const blanks = Array(startDay).fill(null);
-  const days = [...blanks, ...dateRange];
-
-  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
-  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-
-  const getDaySubs = (day: Date | null) => {
-    if (!day) return [];
-    return subscriptions.filter(sub => {
-      const subDate = new Date(sub.nextBillingDate);
-      return isSameDay(subDate, day);
-    });
-  };
-
+export function CalendarView() {
+  const { anchors } = useWorkspace();
+  const [month, setMonth] = useState(startOfMonth(new Date()));
+  const [selected, setSelected] = useState<Subscription | null>(null);
+  const payments = anchors
+    .flatMap((s) => {
+      const date = billingInMonth(s, month);
+      return date ? [{ ...s, date }] : [];
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const days = [
+    ...Array(getDay(month)).fill(null),
+    ...eachDayOfInterval({ start: month, end: endOfMonth(month) }),
+  ];
+  while (days.length % 7) days.push(null);
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 animate-in fade-in duration-500">
-      <div className="lg:col-span-3 bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">{format(currentDate, 'MMMM yyyy')}</h2>
-            <p className="text-slate-500 text-sm">Visualize your upcoming billing cycle</p>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={prevMonth} className="p-2 hover:bg-slate-50 rounded-xl transition-colors border border-slate-100">
-              <ChevronLeft className="w-5 h-5 text-slate-600" />
-            </button>
-            <button onClick={nextMonth} className="p-2 hover:bg-slate-50 rounded-xl transition-colors border border-slate-100">
-              <ChevronRight className="w-5 h-5 text-slate-600" />
-            </button>
-          </div>
+    <div className="page-stack">
+      <header className="page-header">
+        <div>
+          <h1>Billing calendar</h1>
+          <p>Plan around your renewals, one month at a time.</p>
         </div>
-
-        <div className="grid grid-cols-7 mb-4">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest py-2">
-              {day}
+        <span className="badge">
+          <CalendarDays size={14} />
+          Recurring schedule
+        </span>
+      </header>
+      <div className="calendar-layout">
+        <section className="panel calendar-panel">
+          <div className="calendar-header">
+            <div>
+              <h2>{format(month, 'MMMM yyyy')}</h2>
+              <span>
+                {payments.length} scheduled{' '}
+                {payments.length === 1 ? 'payment' : 'payments'}
+              </span>
             </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-px bg-slate-100 border border-slate-100 rounded-2xl overflow-hidden shadow-inner">
-          {days.map((day, idx) => {
-            const daySubs = getDaySubs(day);
-            const isToday = day && isSameDay(day, new Date());
-            
-            return (
-              <div 
-                key={idx} 
-                className={clsx(
-                  "min-h-[120px] bg-white p-2 transition-all group relative",
-                  !day && "bg-slate-50/50"
-                )}
+            <div>
+              <button
+                className="button secondary today-button"
+                onClick={() => setMonth(startOfMonth(new Date()))}
               >
+                Today
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Previous month"
+                onClick={() => setMonth(addMonths(month, -1))}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Next month"
+                onClick={() => setMonth(addMonths(month, 1))}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="calendar-weekdays">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+              <span key={d}>{d}</span>
+            ))}
+          </div>
+          <div className="calendar-grid">
+            {days.map((day: Date | null, i) => (
+              <div className={`calendar-day ${!day ? 'outside' : ''}`} key={i}>
                 {day && (
                   <>
-                    <span className={clsx(
-                      "text-sm font-semibold inline-flex items-center justify-center w-7 h-7 rounded-lg",
-                      isToday ? "bg-indigo-600 text-white" : "text-slate-500"
-                    )}>
+                    <span
+                      className={`day-number ${isSameDay(day, new Date()) ? 'today' : ''}`}
+                    >
                       {format(day, 'd')}
                     </span>
-                    
-                    <div className="mt-2 space-y-1">
-                      {daySubs.map(sub => (
-                        <div 
-                          key={sub.id} 
-                          className="px-2 py-1 rounded-md text-[10px] font-bold text-white truncate shadow-sm cursor-pointer hover:scale-105 transition-transform"
-                          style={{ backgroundColor: sub.color }}
-                        >
-                          {sub.name}
-                        </div>
-                      ))}
+                    <div>
+                      {payments
+                        .filter((s) => isSameDay(parseISO(s.date), day))
+                        .map((s) => (
+                          <button
+                            className="calendar-event"
+                            key={s.id}
+                            style={{ borderLeftColor: s.color }}
+                            aria-label={`View ${s.name} on ${format(day, 'MMM d')}`}
+                            onClick={() =>
+                              setSelected(anchors.find((a) => a.id === s.id)!)
+                            }
+                          >
+                            <span>{s.name}</span>
+                            <small>{money(s.price)}</small>
+                          </button>
+                        ))}
                     </div>
                   </>
                 )}
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-          <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <Info className="w-4 h-4 text-indigo-500" />
-            Billing Summary
-          </h3>
-          <div className="space-y-4">
-            <div className="p-4 bg-slate-50 rounded-2xl">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Due this month</p>
-              <p className="text-2xl font-bold text-slate-900">
-                ${subscriptions
-                  .filter(s => isSameMonth(new Date(s.nextBillingDate), currentDate))
-                  .reduce((acc, s) => acc + s.price, 0)
-                  .toFixed(2)}
-              </p>
+            ))}
+          </div>
+          <p className="calendar-footnote">
+            Renewals are projected from your saved billing dates and cycles.
+          </p>
+        </section>
+        <aside className="calendar-aside">
+          <section className="month-summary">
+            <span>Scheduled this month</span>
+            <strong>{money(payments.reduce((n, s) => n + s.price, 0))}</strong>
+            <p>Across {payments.length} recurring payments</p>
+          </section>
+          <section className="panel">
+            <div className="panel-heading">
+              <h2>Monthly agenda</h2>
             </div>
-            <div className="p-4 bg-orange-50 rounded-2xl">
-              <p className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-1">Next Payment</p>
-              {subscriptions.length > 0 ? (
-                <div>
-                  <p className="font-bold text-slate-900">{subscriptions[0].name}</p>
-                  <p className="text-sm text-slate-500">{format(new Date(subscriptions[0].nextBillingDate), 'MMM d, yyyy')}</p>
+            <div className="agenda-list">
+              {payments.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() =>
+                    setSelected(anchors.find((a) => a.id === s.id)!)
+                  }
+                >
+                  <span className="agenda-date">
+                    {format(parseISO(s.date), 'MMM d')}
+                  </span>
+                  <span>
+                    <strong>{s.name}</strong>
+                    <small>{s.plan || s.category}</small>
+                  </span>
+                  <strong>{money(s.price)}</strong>
+                </button>
+              ))}
+              {!payments.length && (
+                <div className="empty-state">
+                  <p>No renewals scheduled this month.</p>
                 </div>
-              ) : (
-                <p className="text-sm text-slate-500">No upcoming payments</p>
               )}
             </div>
-          </div>
-        </div>
+          </section>
+        </aside>
       </div>
+      {selected && (
+        <SubscriptionDetailModal
+          subscription={selected}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
-};
+}

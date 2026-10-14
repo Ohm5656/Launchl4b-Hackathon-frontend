@@ -1,6 +1,21 @@
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
+import { Toaster } from 'sonner';
+import { Suspense } from 'react';
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <Suspense
+        fallback={
+          <div className="empty-state" role="status">
+            Opening your workspace…
+          </div>
+        }
+      >
+        <RouterProvider router={router} />
+      </Suspense>
+      <Toaster position="top-right" closeButton richColors />
+    </>
+  );
 }

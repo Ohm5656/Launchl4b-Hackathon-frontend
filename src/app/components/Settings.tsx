@@ -1,134 +1,295 @@
-import React, { useState } from 'react';
-import { Bell, Mail, Shield, Smartphone, ChevronRight } from 'lucide-react';
-import { clsx } from 'clsx';
+import { useRef, useState } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { Link } from 'react-router';
+import {
+  Bell,
+  Download,
+  Mail,
+  Check,
+  Wallet,
+  HardDrive,
+  RefreshCw,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+import {
+  parseWorkspace,
+  useWorkspace,
+  type SavedWorkspace,
+} from '../services/Workspace';
 
-export const Settings: React.FC = () => {
-  const [reminders, setReminders] = useState({
-    sevenDay: true,
-    threeDay: true,
-    oneDay: true,
-    email: false,
-    push: true
-  });
-
-  const toggle = (key: keyof typeof reminders) => {
-    setReminders(prev => ({ ...prev, [key]: !prev[key] }));
+export function Settings() {
+  const {
+    preferences,
+    setPreferences,
+    isDemo,
+    anchors,
+    lastSync,
+    isSyncing,
+    sync,
+    storageError,
+    restoreWorkspace,
+  } = useWorkspace();
+  const [budget, setBudget] = useState(preferences.budget.toString());
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [backup, setBackup] = useState<SavedWorkspace | null>(null);
+  const readBackup = async (file?: File) => {
+    if (!file) return;
+    try {
+      if (file.size > 2_000_000)
+        throw new Error('Choose a workspace backup smaller than 2 MB.');
+      setBackup(parseWorkspace(await file.text()));
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'The backup could not be read.',
+      );
+    } finally {
+      if (fileInput.current) fileInput.current.value = '';
+    }
   };
-
+  const exportData = () => {
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          { version: 1, subscriptions: anchors, preferences, lastSync },
+          null,
+          2,
+        ),
+      ],
+      { type: 'application/json' },
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `subtrack-${isDemo ? 'demo' : 'workspace'}-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success('Workspace backup exported');
+  };
   return (
-    <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
-      <header>
-        <h2 className="text-3xl font-bold text-slate-900">Settings</h2>
-        <p className="text-slate-500 mt-1">Manage your notification preferences and account security.</p>
-      </header>
-
-      <div className="space-y-6">
-        {/* Notifications Section */}
-        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-50">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2">
-              <Bell className="w-5 h-5 text-indigo-500" />
-              Reminders & Alerts
-            </h3>
-            <p className="text-sm text-slate-500 mt-1">Choose how and when you want to be reminded of upcoming bills.</p>
-          </div>
-          
-          <div className="divide-y divide-slate-50 p-6 space-y-6">
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Timing</h4>
-              {[
-                { id: 'sevenDay', label: '7 days before charge', desc: 'A week notice to review your upcoming bill' },
-                { id: 'threeDay', label: '3 days before charge', desc: 'A quick nudge as the date approaches' },
-                { id: 'oneDay', label: '1 day before charge', desc: 'Final reminder before funds are withdrawn' },
-              ].map(item => (
-                <div key={item.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-900">{item.label}</p>
-                    <p className="text-sm text-slate-500">{item.desc}</p>
-                  </div>
-                  <button 
-                    onClick={() => toggle(item.id as keyof typeof reminders)}
-                    className={clsx(
-                      "w-12 h-6 rounded-full transition-colors relative",
-                      reminders[item.id as keyof typeof reminders] ? "bg-indigo-600" : "bg-slate-200"
-                    )}
-                  >
-                    <div className={clsx(
-                      "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
-                      reminders[item.id as keyof typeof reminders] ? "left-7" : "left-1"
-                    )} />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-4 pt-6">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Channels</h4>
-              {[
-                { id: 'email', label: 'Email Notifications', desc: 'Receive detailed reports to your inbox', icon: Mail },
-                { id: 'push', label: 'Push Notifications', desc: 'Get instant alerts on your mobile device', icon: Smartphone },
-              ].map(item => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-500">
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900">{item.label}</p>
-                        <p className="text-sm text-slate-500">{item.desc}</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => toggle(item.id as keyof typeof reminders)}
-                      className={clsx(
-                        "w-12 h-6 rounded-full transition-colors relative",
-                        reminders[item.id as keyof typeof reminders] ? "bg-indigo-600" : "bg-slate-200"
-                      )}
-                    >
-                      <div className={clsx(
-                        "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
-                        reminders[item.id as keyof typeof reminders] ? "left-7" : "left-1"
-                      )} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Account Security */}
-        <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-          <h3 className="font-bold text-slate-900 flex items-center gap-2 mb-6">
-            <Shield className="w-5 h-5 text-emerald-500" />
-            Security & Data
-          </h3>
-          <div className="space-y-4">
-            <button className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors text-left group">
-              <div>
-                <p className="font-semibold text-slate-900">Connected Bank Accounts</p>
-                <p className="text-sm text-slate-500">Chase Bank •••• 4242</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-400" />
-            </button>
-            <button className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors text-left group">
-              <div>
-                <p className="font-semibold text-slate-900">Privacy Mode</p>
-                <p className="text-sm text-slate-500">Hide pricing in dashboard view</p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-400" />
-            </button>
-          </div>
-        </section>
-
-        <div className="pt-4">
-          <p className="text-xs text-center text-slate-400">
-            SubTracker v1.4.2 • Made with care for your digital life
-          </p>
+    <div className="page-stack settings-page">
+      <header className="page-header">
+        <div>
+          <h1>Workspace settings</h1>
+          <p>A few small preferences to make SubTrack work for you.</p>
         </div>
-      </div>
+      </header>
+      <section className="panel settings-section">
+        <div className="settings-section-title">
+          <Wallet size={19} />
+          <div>
+            <h2>Monthly budget</h2>
+            <p>A personal limit for your recurring subscriptions.</p>
+          </div>
+        </div>
+        <form
+          className="budget-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const value = Number(budget);
+            if (Number.isFinite(value) && value > 0) {
+              setPreferences({ ...preferences, budget: value });
+              toast.success('Budget saved');
+            }
+          }}
+        >
+          <label htmlFor="monthly-budget">Budget (USD)</label>
+          <div>
+            <input
+              id="monthly-budget"
+              type="number"
+              min="1"
+              max="1000000"
+              step="0.01"
+              required
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+            />
+            <button type="submit" className="button primary">
+              Save budget
+            </button>
+          </div>
+          <small>Annual subscriptions count as their monthly equivalent.</small>
+        </form>
+      </section>
+      <section className="panel settings-section">
+        <div className="settings-section-title">
+          <Bell size={19} />
+          <div>
+            <h2>Renewal reminders</h2>
+            <p>Keep the next renewal visible in your workspace.</p>
+          </div>
+        </div>
+        <div className="setting-row">
+          <div>
+            <strong>Show next renewal in the sidebar</strong>
+            <p>A quick reminder while you browse your subscriptions.</p>
+          </div>
+          <button
+            className={`toggle ${preferences.reminders ? 'on' : ''}`}
+            role="switch"
+            aria-label="Show next renewal in the sidebar"
+            aria-checked={preferences.reminders}
+            onClick={() =>
+              setPreferences({
+                ...preferences,
+                reminders: !preferences.reminders,
+              })
+            }
+          >
+            <span />
+          </button>
+        </div>
+      </section>
+      <section className="panel settings-section">
+        <div className="settings-section-title">
+          <Mail size={19} />
+          <div>
+            <h2>Email receipts</h2>
+            <p>
+              {isDemo
+                ? 'A sample inbox for exploring the product.'
+                : 'Bring receipts into your workspace with Gmail.'}
+            </p>
+          </div>
+        </div>
+        <div className="setting-row">
+          <div className="email-account">
+            <span className="source-icon">
+              <Mail size={20} />
+            </span>
+            <div>
+              <strong>
+                {isDemo ? 'jamie.davis@example.com' : 'Google Gmail'}
+              </strong>
+              <p>
+                {isDemo
+                  ? `${anchors.filter((s) => s.isAutoDetected).length} sample subscriptions · no real Gmail connection`
+                  : lastSync
+                    ? `Last refreshed ${new Date(lastSync).toLocaleString()}`
+                    : 'Connect your account to scan receipts.'}
+              </p>
+            </div>
+          </div>
+          <span className="badge">
+            {isDemo
+              ? 'Demo inbox'
+              : lastSync
+                ? 'Receipts imported'
+                : 'Not connected'}
+          </span>
+        </div>
+        <div className="settings-actions">
+          {isDemo ? (
+            <span className="muted-inline">
+              <Check size={14} />
+              Sample receipts are available offline.
+            </span>
+          ) : (
+            <>
+              <Link to="/add-gmail" className="button secondary">
+                Connect Gmail
+              </Link>
+              <button
+                className="button secondary"
+                disabled={isSyncing}
+                onClick={sync}
+              >
+                <RefreshCw size={14} />
+                {isSyncing ? 'Refreshing…' : 'Refresh receipts'}
+              </button>
+            </>
+          )}
+        </div>
+      </section>
+      <section className="panel settings-section">
+        <div className="settings-section-title">
+          <HardDrive size={19} />
+          <div>
+            <h2>Your saved workspace</h2>
+            <p>
+              {storageError
+                ? 'Browser storage is unavailable. Export your changes now.'
+                : 'Your subscriptions, notes, and preferences have no expiry.'}
+            </p>
+          </div>
+        </div>
+        <div className="setting-row">
+          <div>
+            <strong>Keep a copy</strong>
+            <p>
+              Data stays in this browser after sign-out. Clearing site data or
+              changing browsers removes access to that copy. Export a backup to
+              keep it elsewhere.
+            </p>
+          </div>
+          <button className="button secondary" onClick={exportData}>
+            <Download size={16} />
+            Export backup
+          </button>
+        </div>
+        <div className="settings-actions">
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".json,application/json"
+            aria-label="Workspace backup file"
+            hidden
+            onChange={(e) => {
+              void readBackup(e.target.files?.[0]);
+            }}
+          />
+          <button
+            className="button secondary"
+            onClick={() => fileInput.current?.click()}
+          >
+            Restore backup
+          </button>
+          <span className="muted-inline">
+            Bring back your details from an exported file.
+          </span>
+        </div>
+      </section>
+      <Dialog.Root
+        open={!!backup}
+        onOpenChange={(open) => {
+          if (!open) setBackup(null);
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="dialog-overlay" />
+          <Dialog.Content className="dialog-content">
+            <div className="dialog-header">
+              <div>
+                <Dialog.Title>Restore this workspace?</Dialog.Title>
+                <Dialog.Description>
+                  This replaces the current {isDemo ? 'demo' : 'account'}{' '}
+                  workspace with {backup?.subscriptions.length} saved
+                  subscriptions, notes, and preferences. Export your current
+                  details first if you want to keep both.
+                </Dialog.Description>
+              </div>
+            </div>
+            <div className="dialog-footer">
+              <Dialog.Close className="button secondary">Cancel</Dialog.Close>
+              <button
+                className="button primary"
+                onClick={() => {
+                  if (backup) {
+                    restoreWorkspace(backup);
+                    setBudget(backup.preferences.budget.toString());
+                  }
+                  setBackup(null);
+                }}
+              >
+                Restore workspace
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
-};
+}

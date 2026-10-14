@@ -1,186 +1,366 @@
-import React from 'react';
-import { 
-  TrendingUp, 
-  Calendar as CalendarIcon, 
-  Layers, 
-  RefreshCcw, 
-  ChevronRight,
-  AlertCircle,
-  Sparkles,
+import { useState } from 'react';
+import {
+  Search,
+  Plus,
+  ChevronDown,
+  ArrowUpRight,
+  CalendarDays,
   Mail,
-  Plus
+  RefreshCw,
+  Check,
+  SlidersHorizontal,
 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { clsx } from 'clsx';
+import { Link, useNavigate } from 'react-router';
+import { useWorkspace } from '../services/Workspace';
+import {
+  dateLabel,
+  daysUntil,
+  money,
+  monthlyCost,
+  type Subscription,
+} from '../services/subscriptions';
+import { AddSubscriptionModal } from './AddSubscriptionModal';
 import { SubscriptionDetailModal } from './SubscriptionDetailModal';
+export type { Subscription } from '../services/subscriptions';
 
-export interface Subscription {
-  id: string;
-  name: string;
-  price: number;
-  billingCycle: 'monthly' | 'yearly';
-  nextBillingDate: string;
-  category: string;
-  color: string;
-  isAutoDetected?: boolean;
-}
-
-interface DashboardProps {
-  subscriptions: Subscription[];
-  isSyncing: boolean;
-  onSync: () => void;
-  lastSync: string;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({ subscriptions, isSyncing, onSync, lastSync }) => {
-  const [selectedSubscription, setSelectedSubscription] = React.useState<Subscription | null>(null);
-  
-  const totalMonthly = subscriptions.reduce((acc, sub) => {
-    return acc + (sub.billingCycle === 'monthly' ? sub.price : sub.price / 12);
-  }, 0);
-
-  const upcomingCharges = subscriptions.filter(sub => {
-    const nextDate = new Date(sub.nextBillingDate);
-    const today = new Date();
-    const diffTime = nextDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays >= 0 && diffDays <= 7;
-  });
-
+export function Dashboard() {
+  const {
+    subscriptions,
+    isDemo,
+    preferences,
+    isSyncing,
+    lastSync,
+    sync,
+    anchors,
+    storageError,
+  } = useWorkspace();
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All categories');
+  const [sort, setSort] = useState('renewal');
+  const [adding, setAdding] = useState(false);
+  const [selected, setSelected] = useState<Subscription | null>(null);
+  const total = subscriptions.reduce((n, s) => n + monthlyCost(s), 0);
+  const upcoming = [...subscriptions].sort((a, b) =>
+    a.nextBillingDate.localeCompare(b.nextBillingDate),
+  );
+  const soon = upcoming.filter((s) => daysUntil(s.nextBillingDate) <= 7);
+  const filtered = subscriptions
+    .filter(
+      (s) =>
+        s.name.toLowerCase().includes(search.toLowerCase()) &&
+        (category === 'All categories' || s.category === category),
+    )
+    .sort((a, b) =>
+      sort === 'price'
+        ? monthlyCost(b) - monthlyCost(a)
+        : sort === 'name'
+          ? a.name.localeCompare(b.name)
+          : a.nextBillingDate.localeCompare(b.nextBillingDate),
+    );
+  const categories = [...new Set(subscriptions.map((s) => s.category))];
+  const budgetPercent = Math.min((total / preferences.budget) * 100, 100);
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="page-stack">
+      <header className="page-header">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-3xl font-bold text-slate-900">Subscription Overview</h2>
-            <Sparkles className="w-6 h-6 text-indigo-500" />
-          </div>
-          <p className="text-slate-500">Last scanned from <span className="text-indigo-600 font-semibold">Gmail</span> {lastSync}</p>
+          <h1>Your subscriptions</h1>
+          <p>A clear view of what’s renewing and where your money goes.</p>
         </div>
-        <button 
-          onClick={onSync}
-          disabled={isSyncing}
-          className={clsx(
-            "flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all shadow-lg active:scale-95",
-            isSyncing 
-              ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
-              : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
-          )}
-        >
-          <Plus className={clsx("w-5 h-5", isSyncing && "animate-spin")} />
-          {isSyncing ? "Connecting..." : "Add Gmail"}
+        <button className="button primary" onClick={() => setAdding(true)}>
+          <Plus size={17} />
+          Add subscription
         </button>
       </header>
-
-      {/* Summary Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div whileHover={{ y: -4 }} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <span className="text-slate-500 font-medium">Monthly Burn</span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-slate-900">${totalMonthly.toFixed(2)}</span>
-            <span className="text-slate-400 text-sm font-medium">/mo</span>
-          </div>
-        </motion.div>
-
-        <motion.div whileHover={{ y: -4 }} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
-              <Layers className="w-6 h-6" />
-            </div>
-            <span className="text-slate-500 font-medium">Tracked Apps</span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-slate-900">{subscriptions.length}</span>
-            <span className="text-slate-400 text-sm font-medium">services</span>
-          </div>
-        </motion.div>
-
-        <motion.div whileHover={{ y: -4 }} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600">
-              <CalendarIcon className="w-6 h-6" />
-            </div>
-            <span className="text-slate-500 font-medium">Coming Soon</span>
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-slate-900">{upcomingCharges.length}</span>
-            <span className="text-slate-400 text-sm font-medium">due in 7d</span>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Subscription List */}
-      <section className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-slate-50 flex justify-between items-center">
+      <div className="overview-summary">
+        <div className="summary-spend">
+          <span>Monthly spending</span>
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Your Active Subscriptions</h3>
-            <p className="text-xs text-slate-400 mt-1">Automatically detected from your email receipts</p>
+            <strong>{money(total)}</strong>
+            <small>/ month</small>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              <div className="w-2 h-2 bg-indigo-400 rounded-full"></div>
-              Auto-detected
+          <p>{money(total * 12)} projected over a year</p>
+        </div>
+        <div className="summary-detail">
+          <span>Active subscriptions</span>
+          <strong>
+            {subscriptions.length}
+            <small> services</small>
+          </strong>
+          <p>{categories.length} categories in your workspace</p>
+        </div>
+        <div className="summary-detail">
+          <span>Renewing this week</span>
+          <strong>{money(soon.reduce((n, s) => n + s.price, 0))}</strong>
+          <p>
+            {soon.length} {soon.length === 1 ? 'payment' : 'payments'} in the
+            next 7 days
+          </p>
+        </div>
+        <div className="summary-budget">
+          <div>
+            <span>Monthly budget</span>
+            <Link to="/app/settings">
+              Edit <ArrowUpRight size={13} />
+            </Link>
+          </div>
+          <strong>{money(preferences.budget)}</strong>
+          <div
+            className={`budget-track ${total > preferences.budget ? 'over-budget' : ''}`}
+          >
+            <span style={{ width: `${budgetPercent}%` }} />
+          </div>
+          <p>
+            {total > preferences.budget
+              ? `${money(total - preferences.budget)} over budget`
+              : `${money(preferences.budget - total)} left this month`}
+          </p>
+        </div>
+      </div>
+      <div className="dashboard-columns">
+        <section className="panel subscription-panel">
+          <div className="panel-heading">
+            <div>
+              <h2>
+                All subscriptions{' '}
+                <span className="count">{subscriptions.length}</span>
+              </h2>
+              <p>Recurring bills, without the guesswork.</p>
             </div>
+            <span className="currency-label">USD</span>
           </div>
-        </div>
-        <div className="divide-y divide-slate-50">
-          {subscriptions.map((sub) => {
-            const isUpcoming = upcomingCharges.some(u => u.id === sub.id);
-            return (
-              <div 
-                key={sub.id} 
-                onClick={() => setSelectedSubscription(sub)}
-                className="p-6 md:p-8 flex items-center gap-6 hover:bg-slate-50/50 transition-colors group cursor-pointer"
+          <div className="table-toolbar">
+            <div className="search-field">
+              <Search size={17} />
+              <input
+                aria-label="Search subscriptions"
+                placeholder="Search subscriptions…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <label className="select-field">
+              <SlidersHorizontal size={15} />
+              <select
+                aria-label="Filter by category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
               >
-                <div 
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white text-xl shadow-md shrink-0"
-                  style={{ backgroundColor: sub.color }}
-                >
-                  {sub.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h4 className="font-bold text-slate-900 truncate">{sub.name}</h4>
-                    {sub.isAutoDetected && (
-                      <div className="p-1 bg-indigo-50 text-indigo-600 rounded-lg tooltip" title="Detected via Gmail AI">
-                        <Mail className="w-3.5 h-3.5" />
-                      </div>
-                    )}
-                    {isUpcoming && (
-                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-black uppercase tracking-wider rounded-md">
-                        Due
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span className="capitalize">{sub.category}</span>
-                    <span>•</span>
-                    <span className="uppercase tracking-tighter font-medium">Next: {new Date(sub.nextBillingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-black text-slate-900 text-lg">${sub.price.toFixed(2)}</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{sub.billingCycle}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-400 group-hover:translate-x-1 transition-all shrink-0" />
+                <option>All categories</option>
+                {categories.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+            <select
+              className="sort-select"
+              aria-label="Sort subscriptions"
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+            >
+              <option value="renewal">Next renewal</option>
+              <option value="price">Highest cost</option>
+              <option value="name">Name</option>
+            </select>
+          </div>
+          <div className="subscription-table">
+            <div className="table-labels">
+              <span>Service</span>
+              <span>Next payment</span>
+              <span>Amount</span>
+              <span />
+            </div>
+            {filtered.map((s) => (
+              <button
+                className="subscription-row"
+                key={s.id}
+                onClick={() => setSelected(anchors.find((a) => a.id === s.id)!)}
+                aria-label={`View ${s.name}`}
+              >
+                <span className="service-cell">
+                  <span
+                    className="service-logo"
+                    style={{ backgroundColor: s.color }}
+                  >
+                    {s.name === 'Adobe Creative Cloud'
+                      ? 'Ad'
+                      : s.name === 'iCloud+'
+                        ? 'iC'
+                        : s.name === 'YouTube Premium'
+                          ? '▶'
+                          : s.name.slice(0, 1)}
+                  </span>
+                  <span>
+                    <strong>{s.name}</strong>
+                    <small>
+                      {s.plan || s.category}
+                      {s.isAutoDetected && (
+                        <Mail size={12} aria-label="From email receipt" />
+                      )}
+                    </small>
+                  </span>
+                </span>
+                <span className="renewal-cell">
+                  <strong>
+                    {dateLabel(s.nextBillingDate).replace(/, \d{4}/, '')}
+                  </strong>
+                  <small
+                    className={
+                      daysUntil(s.nextBillingDate) <= 3 ? 'due-soon' : ''
+                    }
+                  >
+                    {daysUntil(s.nextBillingDate) === 0
+                      ? 'Today'
+                      : `In ${daysUntil(s.nextBillingDate)} days`}
+                  </small>
+                </span>
+                <span className="amount-cell">
+                  <strong>{money(s.price)}</strong>
+                  <small>
+                    /{s.billingCycle === 'monthly' ? 'month' : 'year'}
+                  </small>
+                </span>
+                <ChevronDown className="row-arrow" size={15} />
+              </button>
+            ))}
+            {!filtered.length && (
+              <div className="empty-state">
+                <Search size={24} />
+                <h3>
+                  {subscriptions.length
+                    ? 'No matching subscriptions'
+                    : 'Your workspace is ready'}
+                </h3>
+                <p>
+                  {subscriptions.length
+                    ? 'Try another name or category.'
+                    : 'Add your first subscription or connect Gmail in Settings.'}
+                </p>
+                {subscriptions.length ? (
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      setSearch('');
+                      setCategory('All categories');
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                ) : (
+                  <button
+                    className="button primary"
+                    onClick={() => setAdding(true)}
+                  >
+                    Add subscription
+                  </button>
+                )}
               </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Subscription Detail Modal */}
-      {selectedSubscription && (
-        <SubscriptionDetailModal 
-          subscription={selectedSubscription}
-          onClose={() => setSelectedSubscription(null)}
+            )}
+          </div>
+          <div className="table-footer">
+            <span>
+              Showing {filtered.length} of {subscriptions.length} subscriptions
+            </span>
+            <span>
+              <Check size={13} />
+              {storageError ? 'Changes not saved' : 'Saved in this browser'}
+            </span>
+          </div>
+        </section>
+        <aside className="overview-aside">
+          <section className="panel upcoming-panel">
+            <div className="panel-heading">
+              <h2>Coming up</h2>
+              <CalendarDays size={17} />
+            </div>
+            <p className="aside-description">Your next three renewals.</p>
+            <div className="upcoming-list">
+              {upcoming.slice(0, 3).map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() =>
+                    setSelected(anchors.find((a) => a.id === s.id)!)
+                  }
+                >
+                  <span className="upcoming-date">
+                    <strong>
+                      {new Date(`${s.nextBillingDate}T00:00:00`).getDate()}
+                    </strong>
+                    <small>
+                      {new Date(
+                        `${s.nextBillingDate}T00:00:00`,
+                      ).toLocaleDateString('en-US', { month: 'short' })}
+                    </small>
+                  </span>
+                  <span>
+                    <strong>{s.name}</strong>
+                    <small>
+                      {money(s.price)} · {s.billingCycle}
+                    </small>
+                  </span>
+                  <span
+                    className="renewal-dot"
+                    style={{ background: s.color }}
+                  />
+                </button>
+              ))}
+              {!upcoming.length && (
+                <p className="aside-description">No renewals to show yet.</p>
+              )}
+            </div>
+            <Link className="panel-link" to="/app/calendar">
+              Open billing calendar <ArrowUpRight size={15} />
+            </Link>
+          </section>
+          <section className="receipt-source">
+            <div className="source-icon">
+              <Mail size={19} />
+            </div>
+            <h3>{isDemo ? 'From your demo inbox' : 'Email receipts'}</h3>
+            <p>
+              {isDemo
+                ? `${subscriptions.filter((s) => s.isAutoDetected).length} subscriptions matched to sample receipts. Add a service yourself whenever you need.`
+                : lastSync
+                  ? `Last refreshed ${new Date(lastSync).toLocaleDateString()}.`
+                  : 'Connect Gmail to bring your subscription receipts together.'}
+            </p>
+            <button
+              className="button secondary"
+              disabled={isSyncing}
+              onClick={() => (isDemo ? sync() : navigate('/add-gmail'))}
+            >
+              <RefreshCw size={14} />
+              {isSyncing
+                ? 'Refreshing…'
+                : isDemo
+                  ? 'Review demo receipts'
+                  : 'Connect Gmail'}
+            </button>
+            <small>
+              {isDemo
+                ? 'Sample data · no inbox connection'
+                : 'Read-only Gmail access'}
+            </small>
+          </section>
+          <div className="workspace-note">
+            <span className="note-pin" />
+            <p>Make it yours.</p>
+            <small>
+              Add notes to a subscription to remember what you use it for, or
+              when to review it.
+            </small>
+          </div>
+        </aside>
+      </div>
+      {adding && (
+        <AddSubscriptionModal isOpen onClose={() => setAdding(false)} />
+      )}
+      {selected && (
+        <SubscriptionDetailModal
+          subscription={selected}
+          onClose={() => setSelected(null)}
         />
       )}
     </div>
   );
-};
+}
